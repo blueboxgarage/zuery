@@ -1,0 +1,13 @@
+column_name,table_name,system_a_fieldmap,system_b_fieldmap,field_description,field_type
+user_id,users,uid,user_identifier,Unique identifier for user,INTEGER
+email,users,email_addr,user_email,User email address,VARCHAR
+status,users,account_status,user_status,Account status (active/inactive),VARCHAR
+created_at,users,create_date,registration_date,Account creation timestamp,TIMESTAMP
+order_id,orders,oid,order_identifier,Unique identifier for order,INTEGER
+order_total,orders,amount,total_cost,Total order value in cents,INTEGER
+order_status,orders,status,order_state,Current status of order,VARCHAR
+order_date,orders,purchase_date,order_timestamp,Date when order was placed,TIMESTAMP
+product_id,products,pid,product_identifier,Unique identifier for product,INTEGER
+product_name,products,name,product_name,Name of the product,VARCHAR
+price,products,cost,product_price,Product price in cents,INTEGER
+category,products,product_category,product_type,Product category,VARCHAR

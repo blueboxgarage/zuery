@@ -1,19 +1,30 @@
-# PostgreSQL Query Generator API - Zig Implementation
+# Zuery - PostgreSQL Query Generator in Zig
 
-**Claude Code Instructions for Building a Natural Language to SQL API Service**
+A high-performance natural language to SQL query generator implemented in Zig. This service allows non-technical users to query databases using plain English by converting natural language descriptions into PostgreSQL queries.
 
 ## 🎯 Project Overview
 
-Build a high-performance REST API service in Zig that converts natural language descriptions into PostgreSQL queries using a CSV-based field mapping system. This service will allow non-technical users to query databases using plain English.
+Zuery converts natural language descriptions into PostgreSQL queries using a CSV-based field mapping system. It supports different query types (SELECT, COUNT, GROUP BY), handles temporal filters, and works with multiple field mapping systems.
 
-## 📋 Core Requirements
+## 📋 Core Features
 
-### **Primary Functionality**
-- Parse CSV file containing database field mappings
-- Accept natural language descriptions via HTTP POST
-- Generate PostgreSQL queries using fuzzy field matching
-- Return structured JSON responses with generated SQL and confidence scores
-- Support multiple field mapping systems (system_a, system_b, default)
+- **CSV-based Field Mapping**: Load and parse database field definitions from CSV
+- **Natural Language Processing**: Extract intent, fields, and filters from text
+- **Multi-system Support**: Map fields differently based on the target system (system_a, system_b, default)
+- **Query Generation**: Create PostgreSQL queries with appropriate clauses
+- **Memory Safety**: Proper memory management with arena allocators
+
+## 🚀 Current Implementation
+
+The project currently implements:
+
+- **CSV Parser**: Parses field mapping definitions from CSV files
+- **Field Mapper**: Matches natural language input to database fields
+- **NLP Engine**: Detects query type, temporal patterns, and filters
+- **Query Generator**: Generates SQL based on matched fields and intent
+- **HTTP Server**: Simplified server that demonstrates the API functionality
+- **Config**: Environment-aware configuration system
+- **Tests**: Comprehensive test suite for all components
 
 ### **CSV Field Mapping Format**
 ```csv
@@ -25,204 +36,147 @@ order_total,orders,amount,total_cost,Total order value in cents,INTEGER
 order_status,orders,status,order_state,Current status of order,VARCHAR
 ```
 
-## 🔧 Technical Specifications
+## 🏗 Project Structure
 
-### **Language & Framework**
-- **Language**: Zig (latest stable version)
-- **HTTP Server**: Use `std.http.Server` from Zig standard library
-- **No external dependencies** for core functionality (prefer stdlib)
-- **Memory Management**: Use Arena allocators for request-scoped memory
-
-### **API Endpoints**
-1. **POST /generate-query** - Main query generation endpoint
-2. **GET /health** - Health check endpoint  
-3. **GET /fields** - List available field mappings
-
-### **Request/Response Format**
-
-**POST /generate-query**
-```json
-{
-  "description": "get all active users with email addresses from last 30 days",
-  "system": "system_a",
-  "limit": 100
-}
 ```
-
-**Response**
-```json
-{
-  "query": "SELECT uid, email_addr, create_date\nFROM users\nWHERE status = 'active' AND create_date >= CURRENT_DATE - INTERVAL '30 days'\nLIMIT 100;",
-  "matched_fields": [
-    {
-      "column_name": "uid",
-      "table_name": "users", 
-      "field_description": "Unique identifier for user",
-      "field_type": "INTEGER",
-      "match_score": 85.5,
-      "matched_text": "user identifier"
-    }
-  ],
-  "confidence": 0.855
-}
-```
-
-## 🏗 Architecture Requirements
-
-### **Project Structure**
-```
-query-generator-api/
-├── build.zig
+zuery/
+├── build.zig              # Build configuration
+├── field_mappings.csv     # Sample field mappings
 ├── src/
-│   ├── main.zig              # Entry point, server setup
-│   ├── types.zig             # Data structures and types
-│   ├── field_mapper.zig      # CSV loading and field matching
-│   ├── query_generator.zig   # SQL query generation logic
-│   ├── http_server.zig       # HTTP request handling
-│   ├── csv_parser.zig        # CSV file parsing
-│   ├── nlp_engine.zig        # Natural language processing
-│   └── config.zig            # Configuration constants
-├── field_mappings.csv        # Sample field mapping data
-└── README.md
+│   ├── main.zig           # Entry point, server setup
+│   ├── types.zig          # Core data structures
+│   ├── field_mapper.zig   # Maps natural language to fields
+│   ├── query_generator.zig # SQL generation logic
+│   ├── http_server.zig    # HTTP request handling
+│   ├── csv_parser.zig     # CSV file parsing
+│   ├── nlp_engine.zig     # NLP intent detection
+│   ├── config.zig         # Configuration handling
+│   └── tests.zig          # Test suite
+├── zig_system_design.mermaid # System design diagram
+└── README.md              # Project documentation
 ```
 
-### **Core Modules to Implement**
+## 📘 Module Descriptions
 
-#### **1. CSV Parser (`csv_parser.zig`)**
-- Parse CSV file with field mappings
-- Handle quoted fields and escaped characters
-- Convert CSV rows to FieldMapping structs
-- Error handling for malformed CSV
+### **CSV Parser (`csv_parser.zig`)**
+- Parses CSV field mapping files
+- Converts rows to FieldMapping structs
+- Includes proper memory management and cleanup
+- Handles basic error conditions
 
-#### **2. Field Mapper (`field_mapper.zig`)**
-- Load field mappings from CSV on startup
-- Implement fuzzy string matching for field descriptions
-- Extract keywords from natural language input
-- Score and rank field matches
-- Support system-specific field name resolution
+### **Field Mapper (`field_mapper.zig`)**
+- Loads and manages field mappings
+- Implements keyword-based matching algorithm
+- Scores and ranks potential field matches
+- Supports system-specific field mapping (system_a, system_b)
+- Uses arena allocators for efficient memory use
 
-#### **3. NLP Engine (`nlp_engine.zig`)**
-- Extract keywords from user descriptions
-- Detect query intent (SELECT, COUNT, GROUP BY)
-- Identify temporal patterns ("last 30 days", "recent")
-- Recognize filter patterns ("active", "status")
-- Simple tokenization and stop word filtering
+### **NLP Engine (`nlp_engine.zig`)**
+- Detects query intent (SELECT, COUNT, GROUP BY)
+- Identifies temporal patterns ("last 30 days", "yesterday")
+- Recognizes filter patterns ("active", "completed")
+- Implements simple pattern matching
 
-#### **4. Query Generator (`query_generator.zig`)**
-- Generate SELECT queries for general data retrieval
-- Generate COUNT queries for "how many" questions
-- Generate GROUP BY queries for aggregation
-- Add WHERE clauses based on detected patterns
-- Handle LIMIT clauses and basic JOINs
+### **Query Generator (`query_generator.zig`)**
+- Generates SQL queries based on detected intent
+- Builds WHERE clauses from detected filters
+- Handles temporal filters in queries
+- Supports different query types
+- Calculates confidence scores
 
-#### **5. HTTP Server (`http_server.zig`)**
-- Handle HTTP requests using `std.http.Server`
-- Parse JSON request bodies
-- Route requests to appropriate handlers
-- Generate JSON responses
-- Add CORS headers for web client support
+### **HTTP Server (`http_server.zig`)**
+- Simplified demonstration server
+- Processes sample queries to show functionality
+- Includes proper error handling
+- Uses arena allocators for request-scoped memory
 
-## 🎯 Implementation Priorities
+### **Config (`config.zig`)**
+- Manages application configuration
+- Supports environment variable overrides
+- Includes proper resource management
 
-### **Phase 1: Foundation (Start Here)**
-1. Set up basic Zig project with `build.zig`
-2. Implement CSV parser with basic field mapping support
-3. Create HTTP server with health check endpoint
-4. Define core data structures in `types.zig`
+## 🧪 Testing
 
-### **Phase 2: Core Logic**
-1. Implement field matching with simple string contains logic
-2. Add basic query generation for SELECT statements
-3. Create `/generate-query` endpoint with hardcoded examples
-4. Add keyword extraction and scoring
+The project includes a comprehensive test suite in `src/tests.zig` that verifies:
 
-### **Phase 3: Intelligence**
-1. Implement fuzzy string matching algorithm
-2. Add intent detection for different query types
-3. Enhance query generation with WHERE clauses
-4. Add confidence scoring system
+- NLP engine query type detection
+- Temporal pattern detection
+- Filter pattern detection
+- CSV parser functionality
+- Query generator SQL generation
+- Field mapper matching functionality
+- Configuration handling
+- Integration tests for the full query generation process
+- HTTP server error handling
 
-### **Phase 4: Polish**
-1. Add comprehensive error handling
-2. Implement `/fields` listing endpoint
-3. Add proper JSON parsing and serialization
-4. Performance optimization and memory management
-
-## 🧠 Algorithm Guidelines
-
-### **Fuzzy Matching Algorithm**
-- Use Levenshtein distance or similar string similarity metric
-- Score matches between 0-100 (higher = better match)
-- Consider both field descriptions and column names
-- Apply keyword-based scoring for partial matches
-
-### **Intent Detection Patterns**
-- **COUNT**: "how many", "count", "total number"
-- **GROUP BY**: "by category", "group by", "breakdown"
-- **SELECT**: Default for general queries
-- **FILTER**: "active", "recent", "last X days"
-
-### **Query Generation Logic**
+Run tests with:
 ```
-1. Analyze description for intent and keywords
-2. Find relevant fields using fuzzy matching
-3. Determine primary table from highest-scoring field
-4. Generate appropriate SQL based on intent
-5. Add WHERE clauses for detected filters
-6. Apply LIMIT if specified
+zig build test         # Run all tests
+zig build test-only    # Run only the dedicated test file
 ```
 
-## 📊 Performance Requirements
+## 🔍 Example Use Cases
 
-- **Startup Time**: < 100ms (CSV loading)
-- **Query Generation**: < 50ms per request
-- **Memory Usage**: < 50MB for typical field mapping files
-- **Concurrency**: Handle 100+ concurrent requests
+1. **Simple Selection**: "get user emails"
+   ```sql
+   SELECT email FROM users;
+   ```
 
-## 🧪 Testing Requirements
+2. **Filtered Data**: "active users registered yesterday"
+   ```sql
+   SELECT * FROM users 
+   WHERE status = 'active' AND created_at >= CURRENT_DATE - INTERVAL '1 day';
+   ```
 
-Create tests for:
-- CSV parsing with various input formats
-- Field matching accuracy with different descriptions
-- Query generation for each supported type
-- HTTP endpoint functionality
-- Error handling scenarios
+3. **Counting**: "how many users are there"
+   ```sql
+   SELECT COUNT(*) FROM users;
+   ```
 
-## 🔍 Example Use Cases to Support
+4. **Grouping**: "count products by category"
+   ```sql
+   SELECT category, COUNT(*) FROM products GROUP BY category;
+   ```
 
-1. **Simple Selection**: "get user emails" → `SELECT email FROM users;`
-2. **Filtered Data**: "active users from last week" → `SELECT * FROM users WHERE status = 'active' AND created_at >= CURRENT_DATE - INTERVAL '7 days';`
-3. **Counting**: "how many orders were placed" → `SELECT COUNT(*) FROM orders;`
-4. **Grouping**: "orders by status" → `SELECT order_status, COUNT(*) FROM orders GROUP BY order_status;`
-5. **Multi-system**: Use system_a field mappings when system="system_a"
+5. **System-specific**: "find the uid of a user" (when system_a is specified)
+   ```sql
+   SELECT uid FROM users;
+   ```
 
-## 🚀 Getting Started
+## 🚀 Building and Running
 
-1. **Initialize Project**: `zig init-exe` 
-2. **Create build.zig** with basic executable configuration
-3. **Start with main.zig** and basic HTTP server
-4. **Implement CSV parsing first** to establish data foundation
-5. **Add field matching logic** before query generation
-6. **Test each component** incrementally
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/zuery.git
+cd zuery
 
-## 💡 Implementation Notes
+# Build the project
+zig build
 
-- **Use Arena allocators** for request-scoped memory management
-- **Prefer standard library** over external dependencies when possible
-- **Keep CSV file path configurable** via command line or environment
-- **Add comprehensive logging** for debugging field matches and queries
-- **Make fuzzy matching threshold configurable** (default: 30.0)
-- **Consider caching** parsed CSV data for performance
+# Run the executable
+./zig-out/bin/zuery
 
-## 🎯 Success Criteria
+# Run tests
+zig build test
+```
 
-The implementation is successful when:
-- ✅ Loads CSV field mappings on startup
-- ✅ Responds to HTTP requests on all defined endpoints  
-- ✅ Generates valid PostgreSQL queries from natural language
-- ✅ Returns structured JSON with confidence scores
-- ✅ Handles errors gracefully with appropriate HTTP status codes
-- ✅ Supports multiple field mapping systems
-- ✅ Processes requests in under 50ms
+## 💡 Implementation Details
 
-**Start with the foundation and build incrementally. Focus on getting basic functionality working before adding advanced features like fuzzy matching and complex query generation.**
+- **Memory Management**: Uses arena allocators for request-scoped memory
+- **Field Matching**: Implements a keyword-based scoring system
+- **Intent Detection**: Pattern matching to determine query type
+- **Error Handling**: Comprehensive error detection and handling
+- **Testing**: Extensive test suite for all components
+
+## 🔮 Future Improvements
+
+- Replace simplified HTTP server with full implementation
+- Enhance NLP capabilities with more sophisticated algorithms
+- Add more complex query types (JOIN, HAVING, etc.)
+- Implement full JSON parsing for request/response
+- Add more extensive logging and debugging tools
+- Implement caching for frequently used queries
+
+---
+
+Created with Zig 0.14.1

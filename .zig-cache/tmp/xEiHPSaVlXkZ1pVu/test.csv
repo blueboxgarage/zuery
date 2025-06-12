@@ -1,0 +1,3 @@
+column_name,table_name,system_a_fieldmap,system_b_fieldmap,field_description,field_type
+user_id,users,uid,user_identifier,Unique identifier for user,INTEGER
+email,users,email_addr,user_email,User email address,VARCHAR

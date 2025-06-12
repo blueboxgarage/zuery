@@ -2,16 +2,14 @@ graph TB
     %% External Components
     Client[👤 HTTP Client]
     CSV[📊 field_mappings.csv]
-    PG[(🗄️ PostgreSQL)]
     
     %% Zig Application Structure
-    subgraph "🚀 Zig Application"
+    subgraph "🚀 Zuery Application"
         Main[🎯 main.zig]
         
-        subgraph "🌐 HTTP Server"
-            Server[🔧 std.http.Server]
-            Router[🔀 Custom Router]
-            Handlers[📋 Request Handlers]
+        subgraph "🌐 HTTP Layer"
+            Server[🔧 http_server.zig]
+            ConfigMgr[⚙️ config.zig]
         end
         
         subgraph "📚 Core Modules"
@@ -19,60 +17,70 @@ graph TB
             NLPEngine[nlp_engine.zig]
             QueryGen[query_generator.zig]
             CSVParser[csv_parser.zig]
+            Types[types.zig]
         end
         
         subgraph "🧠 Processing Pipeline"
-            Tokenizer[🔤 String Tokenizer]
-            FuzzyMatch[🎯 Fuzzy Matcher]
+            KeywordMatch[🔤 Keyword Matching]
+            PatternDetect[👁️ Pattern Detection]
             IntentDetect[🧭 Intent Detection]
             SQLBuilder[🏗️ SQL Builder]
         end
         
-        subgraph "💾 Memory Management"
-            Arena[🏟️ Arena Allocator]
-            FieldCache[📦 Field Cache]
-            QueryCache[⚡ Query Cache]
+        subgraph "🧪 Testing"
+            Tests[tests.zig]
+            UnitTests[🧩 Unit Tests]
+            IntegrationTests[🔄 Integration Tests]
         end
         
-        subgraph "🔗 Database Layer"
-            PQConnection[libpq Connection]
-            QueryValidator[✅ Query Validator]
-            ResultParser[📊 Result Parser]
+        subgraph "💾 Memory Management"
+            Arena[🏟️ Arena Allocators]
+            FieldCache[📦 Field Mappings]
         end
     end
     
     %% Data Flow
-    Client -->|HTTP Request| Server
+    Client -->|Sample Queries| Server
     CSV -->|Load on Start| CSVParser
     
-    Server --> Router
-    Router --> Handlers
-    
-    Handlers --> FieldMapper
-    Handlers --> NLPEngine
-    Handlers --> QueryGen
+    Server --> FieldMapper
+    Server --> NLPEngine
+    Server --> QueryGen
     
     CSVParser --> FieldCache
     FieldMapper --> FieldCache
     
-    NLPEngine --> Tokenizer
-    NLPEngine --> FuzzyMatch
+    NLPEngine --> KeywordMatch
+    NLPEngine --> PatternDetect
     NLPEngine --> IntentDetect
     
+    FieldMapper --> KeywordMatch
+    
     QueryGen --> SQLBuilder
-    SQLBuilder --> QueryValidator
-    QueryValidator --> PQConnection
-    PQConnection --> PG
+    SQLBuilder --> Server
     
     %% Memory Management Flow
     Main --> Arena
+    Server --> Arena
     FieldCache --> Arena
-    QueryCache --> Arena
+    
+    %% Testing Flow
+    Tests --> UnitTests
+    Tests --> IntegrationTests
+    UnitTests --> NLPEngine
+    UnitTests --> CSVParser
+    UnitTests --> QueryGen
+    UnitTests --> FieldMapper
+    UnitTests --> ConfigMgr
+    IntegrationTests --> Server
+    
+    %% Config Flow
+    Main --> ConfigMgr
+    Server --> ConfigMgr
     
     %% Response Flow
-    QueryGen -->|Generated SQL| Handlers
-    Handlers -->|JSON Response| Server
-    Server -->|HTTP Response| Client
+    QueryGen -->|Generated SQL| Server
+    Server -->|Query Results| Client
     
     %% Styling
     classDef external fill:#e1f5fe,stroke:#01579b,stroke-width:2px
@@ -81,12 +89,12 @@ graph TB
     classDef core fill:#fff3e0,stroke:#e65100,stroke-width:2px
     classDef processing fill:#fce4ec,stroke:#880e4f,stroke-width:2px
     classDef memory fill:#f1f8e9,stroke:#33691e,stroke-width:2px
-    classDef database fill:#e0f2f1,stroke:#004d40,stroke-width:2px
+    classDef testing fill:#ffecb3,stroke:#ff6f00,stroke-width:2px
     
-    class Client,CSV,PG external
+    class Client,CSV external
     class Main zigapp
-    class Server,Router,Handlers http
-    class FieldMapper,NLPEngine,QueryGen,CSVParser core
-    class Tokenizer,FuzzyMatch,IntentDetect,SQLBuilder processing
-    class Arena,FieldCache,QueryCache memory
-    class PQConnection,QueryValidator,ResultParser database
+    class Server,ConfigMgr http
+    class FieldMapper,NLPEngine,QueryGen,CSVParser,Types core
+    class KeywordMatch,PatternDetect,IntentDetect,SQLBuilder processing
+    class Arena,FieldCache memory
+    class Tests,UnitTests,IntegrationTests testing
