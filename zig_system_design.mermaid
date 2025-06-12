@@ -1,0 +1,92 @@
+graph TB
+    %% External Components
+    Client[👤 HTTP Client]
+    CSV[📊 field_mappings.csv]
+    PG[(🗄️ PostgreSQL)]
+    
+    %% Zig Application Structure
+    subgraph "🚀 Zig Application"
+        Main[🎯 main.zig]
+        
+        subgraph "🌐 HTTP Server"
+            Server[🔧 std.http.Server]
+            Router[🔀 Custom Router]
+            Handlers[📋 Request Handlers]
+        end
+        
+        subgraph "📚 Core Modules"
+            FieldMapper[field_mapper.zig]
+            NLPEngine[nlp_engine.zig]
+            QueryGen[query_generator.zig]
+            CSVParser[csv_parser.zig]
+        end
+        
+        subgraph "🧠 Processing Pipeline"
+            Tokenizer[🔤 String Tokenizer]
+            FuzzyMatch[🎯 Fuzzy Matcher]
+            IntentDetect[🧭 Intent Detection]
+            SQLBuilder[🏗️ SQL Builder]
+        end
+        
+        subgraph "💾 Memory Management"
+            Arena[🏟️ Arena Allocator]
+            FieldCache[📦 Field Cache]
+            QueryCache[⚡ Query Cache]
+        end
+        
+        subgraph "🔗 Database Layer"
+            PQConnection[libpq Connection]
+            QueryValidator[✅ Query Validator]
+            ResultParser[📊 Result Parser]
+        end
+    end
+    
+    %% Data Flow
+    Client -->|HTTP Request| Server
+    CSV -->|Load on Start| CSVParser
+    
+    Server --> Router
+    Router --> Handlers
+    
+    Handlers --> FieldMapper
+    Handlers --> NLPEngine
+    Handlers --> QueryGen
+    
+    CSVParser --> FieldCache
+    FieldMapper --> FieldCache
+    
+    NLPEngine --> Tokenizer
+    NLPEngine --> FuzzyMatch
+    NLPEngine --> IntentDetect
+    
+    QueryGen --> SQLBuilder
+    SQLBuilder --> QueryValidator
+    QueryValidator --> PQConnection
+    PQConnection --> PG
+    
+    %% Memory Management Flow
+    Main --> Arena
+    FieldCache --> Arena
+    QueryCache --> Arena
+    
+    %% Response Flow
+    QueryGen -->|Generated SQL| Handlers
+    Handlers -->|JSON Response| Server
+    Server -->|HTTP Response| Client
+    
+    %% Styling
+    classDef external fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef zigapp fill:#f3e5f5,stroke:#4a148c,stroke-width:3px
+    classDef http fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef core fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef processing fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+    classDef memory fill:#f1f8e9,stroke:#33691e,stroke-width:2px
+    classDef database fill:#e0f2f1,stroke:#004d40,stroke-width:2px
+    
+    class Client,CSV,PG external
+    class Main zigapp
+    class Server,Router,Handlers http
+    class FieldMapper,NLPEngine,QueryGen,CSVParser core
+    class Tokenizer,FuzzyMatch,IntentDetect,SQLBuilder processing
+    class Arena,FieldCache,QueryCache memory
+    class PQConnection,QueryValidator,ResultParser database
