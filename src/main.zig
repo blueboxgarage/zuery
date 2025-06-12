@@ -31,6 +31,45 @@ pub fn main() !void {
     try field_mapper.loadFromCsv(config.field_mappings_path);
     std.debug.print("Loaded {} field mappings\n", .{field_mapper.field_mappings.len});
     
+    // Check if a query was provided as a command-line argument
+    var arena = std.heap.ArenaAllocator.init(allocator);
+    defer arena.deinit();
+    
+    const args = try std.process.argsAlloc(allocator);
+    defer std.process.argsFree(allocator, args);
+    
+    if (args.len > 1) {
+        // Process a single query from the command line
+        const query = args[1];
+        std.debug.print("Query: \"{s}\"\n", .{query});
+        
+        // Process the query
+        const query_result = try processQuery(
+            &field_mapper,
+            &nlp_engine,
+            &query_generator,
+            query,
+            types.SystemType.default,
+            null,
+            arena.allocator()
+        );
+        
+        // Print the result
+        std.debug.print("SQL: {s}\n", .{query_result.query});
+        std.debug.print("Confidence: {d:.2}\n", .{query_result.confidence});
+        std.debug.print("Matched Fields: {d}\n", .{query_result.matched_fields.len});
+        
+        for (query_result.matched_fields, 0..) |field, i| {
+            std.debug.print("  {d}. {s}.{s} (score: {d:.1})\n", .{
+                i + 1,
+                field.table_name,
+                field.column_name,
+                field.match_score,
+            });
+        }
+        return;
+    }
+    
     // Start HTTP server
     var http_server = HttpServer.init(
         allocator,
@@ -43,6 +82,53 @@ pub fn main() !void {
     
     std.debug.print("Starting server on port {}...\n", .{config.port});
     try http_server.start();
+}
+
+/// Process a query using the NLP pipeline
+fn processQuery(
+    field_mapper: *FieldMapper,
+    nlp_engine: *NlpEngine,
+    query_generator: *QueryGenerator,
+    description: []const u8,
+    system: types.SystemType,
+    limit: ?u32,
+    arena: std.mem.Allocator,
+) !types.QueryResponse {
+    // Extract keywords and detect intent
+    const query_type = try nlp_engine.detectQueryType(description, arena);
+    const time_filter = try nlp_engine.detectTemporalPattern(description, arena);
+    const additional_filter = try nlp_engine.detectFilterPatterns(description, arena);
+    
+    // Find matching fields
+    const matched_fields = try field_mapper.findMatchingFields(
+        description,
+        system,
+        arena
+    );
+    
+    if (matched_fields.len == 0) {
+        return error.FieldMappingNotFound;
+    }
+    
+    // Generate SQL query
+    const sql_query = try query_generator.generateQuery(
+        query_type,
+        matched_fields,
+        system,
+        time_filter,
+        additional_filter,
+        limit,
+        arena
+    );
+    
+    // Calculate confidence score
+    const confidence = query_generator.calculateConfidence(matched_fields);
+    
+    return types.QueryResponse{
+        .query = sql_query,
+        .matched_fields = matched_fields,
+        .confidence = confidence,
+    };
 }
 
 fn createSampleCsvFile(_: std.mem.Allocator, file_path: []const u8) !void {

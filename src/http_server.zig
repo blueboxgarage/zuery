@@ -38,13 +38,74 @@ pub const HttpServer = struct {
     }
     
     /// This is a simulated server that demonstrates the API functionality
-    /// A real implementation would use std.net for the HTTP server
     pub fn start(self: *HttpServer) !void {
-        // This is a simplified version - just print some test output for now
+        // Just print some test output for now
         std.debug.print("Server would listen on 0.0.0.0:{}\n", .{self.port});
+        
+        // Show curl examples
+        std.debug.print("\nTest with curl:\n", .{});
+        std.debug.print("curl -X POST http://localhost:{d}/query -H \"Content-Type: application/json\" -d '", .{self.port});
+        std.debug.print("{{\"query\": \"get all active users\"}}'\n\n", .{});
         
         // Process a few sample queries to demonstrate functionality
         try self.processSampleQueries();
+        
+        // Print instructions for running a separate HTTP server
+        std.debug.print("\n===== Run a Separate HTTP Server =====\n\n", .{});
+        std.debug.print("To test with a real HTTP server, you can use a simple Python server:\n\n", .{});
+        std.debug.print("1. Create a file named zuery_server.py with this content:\n\n", .{});
+        std.debug.print("```python\n", .{});
+        std.debug.print("from http.server import HTTPServer, BaseHTTPRequestHandler\n", .{});
+        std.debug.print("import json\n", .{});
+        std.debug.print("import subprocess\n", .{});
+        std.debug.print("import os\n\n", .{});
+        
+        std.debug.print("class ZueryHandler(BaseHTTPRequestHandler):\n", .{});
+        std.debug.print("    def do_POST(self):\n", .{});
+        std.debug.print("        if self.path != '/query':\n", .{});
+        std.debug.print("            self.send_response(404)\n", .{});
+        std.debug.print("            self.end_headers()\n", .{});
+        std.debug.print("            self.wfile.write(b'{{\"error\": \"Not found\"}}')\n", .{});
+        std.debug.print("            return\n\n", .{});
+        
+        std.debug.print("        content_length = int(self.headers['Content-Length'])\n", .{});
+        std.debug.print("        post_data = self.rfile.read(content_length)\n", .{});
+        std.debug.print("        data = json.loads(post_data.decode('utf-8'))\n\n", .{});
+        
+        std.debug.print("        if 'query' not in data:\n", .{});
+        std.debug.print("            self.send_response(400)\n", .{});
+        std.debug.print("            self.end_headers()\n", .{});
+        std.debug.print("            self.wfile.write(b'{{\"error\": \"Missing query field\"}}')\n", .{});
+        std.debug.print("            return\n\n", .{});
+        
+        std.debug.print("        query = data['query']\n", .{});
+        std.debug.print("        # Call the zuery binary with the query\n", .{});
+        std.debug.print("        result = subprocess.run(\n", .{});
+        std.debug.print("            ['/home/mgarce/zuery/zig-out/bin/zuery', query],\n", .{});
+        std.debug.print("            capture_output=True,\n", .{});
+        std.debug.print("            text=True\n", .{});
+        std.debug.print("        )\n\n", .{});
+        
+        std.debug.print("        # Parse the output and format it as JSON\n", .{});
+        std.debug.print("        lines = result.stdout.strip().split('\\n')\n", .{});
+        std.debug.print("        response = {{\n", .{});
+        std.debug.print("            'sql': lines[1].replace('SQL: ', ''),\n", .{});
+        std.debug.print("            'confidence': float(lines[2].replace('Confidence: ', '')),\n", .{});
+        std.debug.print("            'matched_fields': []\n", .{});
+        std.debug.print("        }}\n\n", .{});
+        
+        std.debug.print("        self.send_response(200)\n", .{});
+        std.debug.print("        self.send_header('Content-type', 'application/json')\n", .{});
+        std.debug.print("        self.end_headers()\n", .{});
+        std.debug.print("        self.wfile.write(json.dumps(response, indent=2).encode('utf-8'))\n\n", .{});
+        
+        std.debug.print("httpd = HTTPServer(('0.0.0.0', 8080), ZueryHandler)\n", .{});
+        std.debug.print("print('Server running at http://0.0.0.0:8080')\n", .{});
+        std.debug.print("httpd.serve_forever()\n", .{});
+        std.debug.print("```\n\n", .{});
+        
+        std.debug.print("2. Run the server: python3 zuery_server.py\n\n", .{});
+        std.debug.print("3. Test with curl: curl -X POST http://localhost:8080/query -H \"Content-Type: application/json\" -d '{{\"query\": \"get all active users\"}}'\n", .{});
     }
     
     fn processSampleQueries(self: *HttpServer) !void {
